@@ -9,7 +9,7 @@ app = Flask(__name__)
 app.secret_key = "nifty-secret"
 
 # Load data once
-df = pd.read_csv("data/nifty.csv")
+df = pd.read_csv("data/NIFTY.csv")
 
 df['datetime'] = pd.to_datetime(df['datetime'])
 df = df.sort_values('datetime').reset_index(drop=True)
