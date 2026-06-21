@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>NIFTY Candle Replay</title>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 30px;
+        }
+
+        .alert {
+            color: red;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .candle {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+        }
+
+        input {
+            width: 500px;
+            padding: 8px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin-top: 10px;
+            font-size: 16px;
+        }
+
+        .success {
+            color: green;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <h2>NIFTY Candle Replay</h2>
+
+    <h3>Pushbullet Setup</h3>
+
+    <input
+        type="text"
+        id="pushbulletToken"
+        placeholder="Enter Pushbullet Access Token">
+
+    <button onclick="saveToken()">
+        Save Token
+    </button>
+    <button onclick="testPushbullet()">
+        Test Pushbullet
+    </button>
+
+    <div id="tokenStatus" class="success"></div>
+
+
+    <hr>
+
+
+
+    <h3>Reference Candle</h3>
+
+    <p>High: {{first_high}}</p>
+    <p>Low: {{first_low}}</p>
+
+    <button onclick="nextCandle()">
+        Next Candle
+    </button>
+
+    <div class="candle">
+
+        <div id="datetime"></div>
+        <div id="ohlc"></div>
+
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <script>
+
+        async function saveToken() {
+
+            const token =
+                document.getElementById("pushbulletToken").value;
+
+            const response =
+                await fetch('/save_token', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        token: token
+                    })
+                });
+
+            const result = await response.json();
+
+            document.getElementById("tokenStatus")
+                .innerHTML = result.message;
+        }
+
+        async function nextCandle() {
+
+            const response =
+                await fetch('/next');
+
+            const data =
+                await response.json();
+
+            if (data.finished) {
+
+                document.getElementById("alert")
+                    .innerHTML = "Replay Finished";
+
+                return;
+            }
+
+            document.getElementById("datetime")
+                .innerHTML = data.datetime;
+
+            document.getElementById("ohlc")
+                .innerHTML =
+                `
+                Open : ${data.open}<br>
+                High : ${data.high}<br>
+                Low : ${data.low}<br>
+                Close : ${data.close}
+                `;
+
+            document.getElementById("alert")
+                .innerHTML = data.alert ?? "";
+        }
+
+        async function testPushbullet() {
+
+            const response =
+                await fetch('/test_pushbullet');
+
+            const result =
+                await response.json();
+
+            alert(result.message);
+        }        
+
+    </script>
+
+</body>
+
+</html>
