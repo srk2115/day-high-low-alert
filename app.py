@@ -5,6 +5,9 @@ import requests
 import pandas as pd
 import os
 
+import yfinance as yf
+import numpy as np
+
 app = Flask(__name__)
 app.secret_key = "nifty-secret"
 
@@ -142,6 +145,169 @@ def test_pushbullet():
     return {
         "message": "Test notification sent"
     }
+
+@app.route("/live")
+def live():
+    error_message = "No data yet."
+    first_high = 0
+    first_low = 0
+    return render_template(
+        "live.html",
+        first_high=first_high,
+        first_low=first_low,
+        error_message=error_message
+    )
+
+@app.route("/get_live_data")
+def get_live_data():
+    from datetime import datetime
+    # import warnings
+
+    import commonfunctions as cf
+    import stockdata as sd
+    import stockdetails as stkdtls
+
+    import pandas as pd
+    # warnings.filterwarnings("ignore")
+    import matplotlib.pyplot as plt
+    import mplfinance as mpf
+    import io
+
+    asondate = cf.getCurrentDate()
+    symbol = "NIFTY"
+    data_source = "tv"
+    data1 = sd.get_stock_data(symbol, interval="5m", asondate=asondate, data_source=data_source, asondateonly=True)
+    print(data1.shape)
+    print(data1)
+
+    error_message = ""
+    first_candle = []
+    first_high = None
+    first_low = None
+    alert = None
+
+    if data1.shape[0] > 0:
+        first_candle = data1.iloc[0]
+        first_high=first_candle['high']
+        first_low=first_candle['low']
+
+        print(first_candle, first_high, first_low)
+
+        if(data1.shape[0]>1):
+            current_candle = data1.iloc[-1]
+            current_candle_high = current_candle['high']
+            current_candle_low = current_candle['low']
+            print(current_candle, current_candle_high, current_candle_low)
+
+        if(data1.shape[0]>2):
+            prev_candle = data1.iloc[-2]
+            prev_candle_high = prev_candle['high']
+            prev_candle_low = prev_candle['low']
+            print(prev_candle, prev_candle_high, prev_candle_low)
+
+            pushbullet_token = session.get(
+                "pushbullet_token"
+            )
+
+            previous = prev_candle
+            current = current_candle
+            # Upside cross
+            if (
+                previous['close'] <= first_high
+                and current['close'] > first_high
+            ):
+                alert = f"🚀 BREAKOUT ABOVE FIRST HIGH ({first_high})"
+                alert = (
+                    f"🚀 BREAKOUT ABOVE FIRST HIGH "
+                    f"({first_high})"
+                )
+
+                send_pushbullet(
+                    pushbullet_token,
+                    "NIFTY BREAKOUT",
+                    alert
+                )
+
+
+            # Downside cross
+            elif (
+                previous['close'] >= first_low
+                and current['close'] < first_low
+            ):
+                alert = f"🔻 BREAKDOWN BELOW FIRST LOW ({first_low})"
+                alert = (
+                    f"🔻 BREAKDOWN BELOW FIRST LOW "
+                    f"({first_low})"
+                )
+
+                send_pushbullet(
+                    pushbullet_token,
+                    "NIFTY BREAKDOWN",
+                    alert
+                )
+        return jsonify({
+            "datetime": str(current['datetime']),
+            "first_high": float(first_high),
+            "first_low": float(first_low),
+            "open": float(current['open']),
+            "high": float(current['high']),
+            "low": float(current['low']),
+            "close": float(current['close']),
+            "alert": alert,
+            "finished": False,
+            "error_message": error_message
+        })
+    else:
+        error_message = "No data found yet." 
+
+        return jsonify({
+            "datetime": None,
+            "first_high": None,
+            "first_low": None,
+            "open": None,
+            "high": None,
+            "low": None,
+            "close": None,
+            "alert": alert,
+            "finished": False,
+            "error_message": ""
+        })
+
+@app.route("/live_yf")
+def get_live_data_yf():
+    symbol = "NIFTY"
+
+    # auto_adjust = True
+    # print(f"Fetching latest daily data for {symbol} with auto_adjust={auto_adjust}...")
+    # df1 = yf.download(
+    #         tickers=f"{symbol}.NS",
+    #         period="1d",
+    #         interval="1d",
+    #         auto_adjust=auto_adjust, 
+    #         threads=False,     
+    #         timeout=15,
+    #         progress=False
+    #     )
+    # if isinstance(df1.columns, pd.MultiIndex):
+    #     # If a batch multi-index leaks through, extract ONLY the current symbol's data slice
+    #     ticker_str = f"{symbol}.NS"
+    #     if ticker_str in df1.columns.get_level_values(1):
+    #         df1 = df1.xs(ticker_str, axis=1, level=1)
+    #     else:
+    #         # Fallback to level 0 if layout varies
+    #         df1.columns = df1.columns.get_level_values(0)
+    # else:
+    #     # If it's already flat, just normalize index layout
+    #     df1.columns = [str(col).strip() for col in df1.columns]
+
+    # first_candle = df1.iloc[0]
+    # last_candle = df1.iloc[-1]
+
+    # return render_template(
+    #     "replay_candle.html",
+    #     first_high=first_candle['high'],
+    #     first_low=first_candle['low']
+    # )
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8000))

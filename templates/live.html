@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>NIFTY Candle Replay</title>
+    <title>Live</title>
 
     <style>
         body {
@@ -42,7 +42,7 @@
 
 <body>
 
-    <h2>NIFTY Candle Replay</h2>
+    <h2>Live</h2>
 
     <h3>Pushbullet Setup</h3>
 
@@ -58,22 +58,17 @@
     <button onclick="testPushbullet()">
         Test Pushbullet
     </button>
+    <button onclick="get_live_data()">
+        Start Live
+    </button>
 
     <div id="tokenStatus" class="success"></div>
 
 
     <hr>
-
-
-
     <h3>Reference Candle</h3>
-
-    <p>High: {{first_high}}</p>
-    <p>Low: {{first_low}}</p>
-
-    <button onclick="nextCandle()">
-        Next Candle
-    </button>
+    <div id="first_high">High:</div>
+    <div id="first_low">Low:</div>
 
     <div class="candle">
 
@@ -81,6 +76,10 @@
         <div id="ohlc"></div>
 
     </div>
+    <div id="error_message" class="alert alert-danger">
+        
+    </div>
+
 
     <div id="alert" class="alert"></div>
 
@@ -138,6 +137,49 @@
 
             document.getElementById("alert")
                 .innerHTML = data.alert ?? "";
+        }
+
+        async function get_live_data() {
+
+            setInterval(async () => {
+                const response =
+                    await fetch('/get_live_data');
+
+                const data =
+                    await response.json();
+
+                console.log(data);
+
+                if (data.finished) {
+
+                    document.getElementById("alert")
+                        .innerHTML = "Replay Finished";
+
+                    return;
+                }
+
+                // console.log("${data.first_high}, ${data.first_lov}");
+                document.getElementById("error_message").innerHTML = `${data.error_message}`;
+                document.getElementById("first_high").innerHTML = `High: ${data.first_high}`;
+                document.getElementById("first_low").innerHTML = `Low: ${data.first_low}`;
+
+                document.getElementById("datetime")
+                    .innerHTML = data.datetime;
+
+                document.getElementById("ohlc")
+                    .innerHTML =
+                    `
+                    Current Date Time: ${new Date().toLocaleString()}<br>
+                    Open : ${data.open}<br>
+                    High : ${data.high}<br>
+                    Low : ${data.low}<br>
+                    Close : ${data.close}
+                    `;
+
+                document.getElementById("alert")
+                    .innerHTML = data.alert ?? "";
+                
+            }, 15000);
         }
 
         async function testPushbullet() {
