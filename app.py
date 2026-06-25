@@ -35,8 +35,8 @@ def send_pushbullet(access_token, title, message):
     print(response.status_code)
     print(response.text)
 
-@app.route("/")
-def index():
+@app.route("/backtest")
+def backtest():
 
     session['current_index'] = 1
 
@@ -48,6 +48,9 @@ def index():
         first_low=first_candle['low']
     )
 
+@app.route("/testtv")
+def testtv():
+    return "";
 
 @app.route("/next")
 def next_candle():
@@ -118,6 +121,19 @@ def next_candle():
         "finished": False
     })
 
+@app.route("/save_tv", methods=["POST"])
+def save_tv():
+
+    data = request.get_json()
+
+    session["username"] = data.get("username")
+    session["password"] = data.get("password")
+    print(session["username"], session["password"]);
+
+    return {
+        "message": "Trading View details saved."
+    }
+
 @app.route("/save_token", methods=["POST"])
 def save_token():
 
@@ -126,7 +142,7 @@ def save_token():
     session["pushbullet_token"] = data.get("token")
 
     return {
-        "message": "Pushbullet token saved"
+        "message": "Pushbullet token saved."
     }
 
 @app.route("/test_pushbullet")
@@ -146,8 +162,8 @@ def test_pushbullet():
         "message": "Test notification sent"
     }
 
-@app.route("/live")
-def live():
+@app.route("/")
+def index():
     error_message = "No data yet."
     first_high = 0
     first_low = 0
@@ -158,8 +174,12 @@ def live():
         error_message=error_message
     )
 
-@app.route("/get_live_data")
+@app.route("/get_live_data", methods=["POST"])
 def get_live_data():
+    username = request.form.get("username")
+    password = request.form.get("password")
+    print(f"Username: {username}, Password: {password}")
+
     from datetime import datetime
     # import warnings
 
@@ -176,7 +196,7 @@ def get_live_data():
     asondate = cf.getCurrentDate()
     symbol = "NIFTY"
     data_source = "tv"
-    data1 = sd.get_stock_data(symbol, interval="5m", asondate=asondate, data_source=data_source, asondateonly=True)
+    data1 = sd.get_stock_data(symbol, interval="5m", asondate=asondate, data_source=data_source, asondateonly=True, username=username, password=password)
     print(data1.shape)
     print(data1)
 

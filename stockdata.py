@@ -14,7 +14,15 @@ def connectTV():
   tv = TvDatafeed(username=username,password=password)
   return tv
 
-def get_stock_data(stock, interval="15m", asondate=cf.getCurrentDate(), data_source = "yahoo", asondateonly=True, fut_contract=None, days=5):
+def connectTVByUser(username, password):
+  from tvDatafeed import TvDatafeed,Interval
+  # get credentials for tradingview
+
+  # initialize tradingview
+  tv = TvDatafeed(username=username,password=password)
+  return tv
+
+def get_stock_data(stock, interval="15m", asondate=cf.getCurrentDate(), data_source = "yahoo", asondateonly=True, fut_contract=None, days=5, username="", password=""):
   data = pd.DataFrame()
   enddate = asondate
   enddt = datetime.strptime(asondate, '%Y-%m-%d')
@@ -67,7 +75,7 @@ def get_stock_data(stock, interval="15m", asondate=cf.getCurrentDate(), data_sou
       days = (currentdt - startdt).days
       # print(days)
       try:
-          tv = connectTV()
+          tv = connectTVByUser(username=username,password=password)
       except Exception as e:
         print(f"Exception: {e}")
         

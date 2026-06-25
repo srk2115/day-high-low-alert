@@ -44,6 +44,27 @@
 
     <h2>Live</h2>
 
+    <h3>Trading View Setup</h3>
+
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+        
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        
+        <button onclick="save_tv()">Save Trading View Setup</button>
+
+    </div>
+    <!-- <label for="user">Username:</label>
+    <input type="text" id="user" name="username" required>
+    
+    <label for="pass">Password:</label>
+    <input type="password" id="pass" name="password" required>
+    <button onclick="save_tv()">Save Trading View Setup</button> -->
+
+
     <h3>Pushbullet Setup</h3>
 
     <input
@@ -84,6 +105,35 @@
     <div id="alert" class="alert"></div>
 
     <script>
+
+        async function save_tv() {
+
+            const username = document.getElementById("username");
+            const password = document.getElementById("password");
+
+            if(!username.value.trim() || !password.value.trim())
+            {
+                alert("Username or Password cannot be blank.");
+                return;
+            }
+
+            const response =
+                await fetch('/save_tv', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+
+            const result = await response.json();
+
+            document.getElementById("tokenStatus")
+                .innerHTML = result.message;
+        }
 
         async function saveToken() {
 
@@ -142,8 +192,18 @@
         async function get_live_data() {
 
             setInterval(async () => {
-                const response =
-                    await fetch('/get_live_data');
+                // const response =
+                //     await fetch('/get_live_data');
+                const response = await fetch('/get_live_data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json' // Tells Flask to expect JSON
+                    },
+                    body: JSON.stringify({ 
+                        username: username, 
+                        password: password 
+                    })
+                });
 
                 const data =
                     await response.json();
