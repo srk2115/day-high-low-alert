@@ -35,25 +35,63 @@ def send_pushbullet(access_token, title, message):
     print(response.status_code)
     print(response.text)
 
-@app.route("/backtest")
-def backtest():
+@app.route("/backtest_asondate", methods=["POST"])
+def backtest_asondate():
+    data = request.get_json()
+    print(data)
+    session["asondate"] = data.get("asondate")
+    asondate = session["asondate"]
+    print(f"Ason date: {session['asondate']}")
 
+    print(asondate)
+    print(df.head())
+    dft = df[df["Date"] == asondate]#.reset_index(drop=True)
+    print(dft.head())
     session['current_index'] = 1
 
-    first_candle = df.iloc[0]
+    # # session['df'] = dft
+    # session['df'] = dft.to_dict(orient="records")
+
+    print(dft.iloc[0])
+    first_candle = dft.iloc[0]
+    first_high = float(first_candle['high']);
+    first_low =  float(first_candle['low']);
+
+    print(first_high, first_low)
+
+    return jsonify({
+        "status": "success",
+        "message": f"Data loaded successfully for {session['asondate']}",
+        "first_high": first_high, # Float conversion prevents JSON errors
+        "first_low": first_low
+    })    
+
+@app.route("/backtest")
+def backtest():
+    unique_dates = df['datetime'].dt.date.unique().tolist()
+    print(unique_dates)
+    # session['current_index'] = 1
+
+    # first_candle = df.iloc[0]
 
     return render_template(
         "replay_candle.html",
-        first_high=first_candle['high'],
-        first_low=first_candle['low']
+        trade_dates = unique_dates
+        # first_high=first_candle['high'],
+        # first_low=first_candle['low']
     )
 
 @app.route("/testtv")
 def testtv():
     return "";
 
-@app.route("/next")
-def next_candle():
+
+@app.route("/next_ason", methods=["POST"])
+def next_ason():
+    data = request.get_json()
+
+    session["username"] = data.get("username")
+    session["password"] = data.get("password")
 
     idx = session.get('current_index', 1)
 
@@ -69,6 +107,178 @@ def next_candle():
 
     current = df.iloc[idx]
     previous = df.iloc[idx - 1]
+
+    alert = None
+    pushbullet_token = session.get(
+        "pushbullet_token"
+    )
+    
+    # Upside cross
+    if (
+        previous['close'] <= first_high
+        and current['close'] > first_high
+    ):
+        alert = f"🚀 BREAKOUT ABOVE FIRST HIGH ({first_high})"
+        alert = (
+            f"🚀 BREAKOUT ABOVE FIRST HIGH "
+            f"({first_high})"
+        )
+
+        send_pushbullet(
+            pushbullet_token,
+            "NIFTY BREAKOUT",
+            alert
+        )
+
+
+    # Downside cross
+    elif (
+        previous['close'] >= first_low
+        and current['close'] < first_low
+    ):
+        alert = f"🔻 BREAKDOWN BELOW FIRST LOW ({first_low})"
+        alert = (
+            f"🔻 BREAKDOWN BELOW FIRST LOW "
+            f"({first_low})"
+        )
+
+        send_pushbullet(
+            pushbullet_token,
+            "NIFTY BREAKDOWN",
+            alert
+        )
+    session['current_index'] = idx + 1
+
+    return jsonify({
+        "datetime": str(current['datetime']),
+        "open": float(current['open']),
+        "high": float(current['high']),
+        "low": float(current['low']),
+        "close": float(current['close']),
+        "alert": alert,
+        "finished": False
+    })
+
+
+@app.route("/next_candle_asondate", methods=["POST"])
+def next_candle_asondate():
+
+    idx = session.get('current_index', 0)
+    # # dft = session['df']
+    # stored_data = session.get('df', [])
+    # dft = pd.DataFrame(stored_data)
+
+    data = request.get_json()
+    print(data)
+    session["asondate"] = data.get("asondate")
+    asondate = session["asondate"]
+    print(f"Ason date: {session['asondate']}")
+
+    print(asondate)
+    print(df.shape)
+    dft = df[df["Date"] == asondate].reset_index(drop=True)
+    print(dft.shape)
+
+    idx = idx + 1
+    session['current_index'] = idx
+    if idx >= len(dft):
+        return jsonify({
+            "finished": True
+        })
+
+    asondate = session["asondate"]
+    # print(asondate)
+    # dft = df[df["datetime"] == asondate]
+
+    first_candle = dft.iloc[0]
+    print(f"first candle: {first_candle}")
+    first_high = first_candle['high']
+    first_low = first_candle['low']
+    print(f"first candle HL: {first_high}, {first_low}")
+
+    current = dft.iloc[idx]
+    previous = dft.iloc[idx - 1]
+    print(f"previous candle: {previous}")
+    print(f"curernt candle: {current}")
+
+    alert = None
+    pushbullet_token = session.get(
+        "pushbullet_token"
+    )
+    
+    # Upside cross
+    if (
+        previous['close'] <= first_high
+        and current['close'] > first_high
+    ):
+        alert = f"🚀 BREAKOUT ABOVE FIRST HIGH ({first_high})"
+        alert = (
+            f"🚀 BREAKOUT ABOVE FIRST HIGH "
+            f"({first_high})"
+        )
+
+        send_pushbullet(
+            pushbullet_token,
+            "NIFTY BREAKOUT",
+            alert
+        )
+
+
+    # Downside cross
+    elif (
+        previous['close'] >= first_low
+        and current['close'] < first_low
+    ):
+        alert = f"🔻 BREAKDOWN BELOW FIRST LOW ({first_low})"
+        alert = (
+            f"🔻 BREAKDOWN BELOW FIRST LOW "
+            f"({first_low})"
+        )
+
+        send_pushbullet(
+            pushbullet_token,
+            "NIFTY BREAKDOWN",
+            alert
+        )
+    
+
+    return jsonify({
+        "datetime": str(current['datetime']),
+        "open": float(current['open']),
+        "high": float(current['high']),
+        "low": float(current['low']),
+        "close": float(current['close']),
+        "alert": alert,
+        "finished": False
+    })
+
+@app.route("/next")
+def next_candle():
+
+    idx = session.get('current_index', 1)
+    # dft = session['df']
+    stored_data = session.get('df', [])
+    dft = pd.DataFrame(stored_data)
+
+    if idx >= len(dft):
+        return jsonify({
+            "finished": True
+        })
+
+    asondate = session["asondate"]
+    # print(asondate)
+    # dft = df[df["datetime"] == asondate]
+
+    first_candle = dft.iloc[0]
+    print(f"first candle: {first_candle}")
+    first_high = first_candle['high']
+    first_low = first_candle['low']
+    print(f"first candle HL: {first_high}, {first_low}")
+
+    current = dft.iloc[idx]
+    previous = dft.iloc[idx - 1]
+    print(f"previous candle: {previous}")
+    print(f"curernt candle: {current}")
 
     alert = None
     pushbullet_token = session.get(

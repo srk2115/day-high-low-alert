@@ -60,7 +60,15 @@
     </button>
 
     <div id="tokenStatus" class="success"></div>
-
+    <label for="asondate">Select a Trade Date:</label>
+    <select id="asondate" name="asondate">
+        {% for trade_date in trade_dates %}
+            <option value="{{ trade_date }}">{{ trade_date }}</option>
+        {% endfor %}
+    </select>
+    <button onclick="backtest_asondate()">
+        Load Data to Backtest
+    </button>
 
     <hr>
 
@@ -68,10 +76,10 @@
 
     <h3>Reference Candle</h3>
 
-    <p>High: {{first_high}}</p>
-    <p>Low: {{first_low}}</p>
+    <p>High: <span id="display-high">—</span></p>
+    <p>Low: <span id="display-low">—</span></p>
 
-    <button onclick="nextCandle()">
+    <button onclick="next_candle_asondate()">
         Next Candle
     </button>
 
@@ -85,6 +93,75 @@
     <div id="alert" class="alert"></div>
 
     <script>
+        async function backtest_asondate() {
+
+            const asondate = document.getElementById("asondate").value;
+            console.log(`asondate: ${asondate}`);
+            const response =
+                await fetch('/backtest_asondate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        asondate: asondate
+                    })
+                });
+
+            const result = await response.json();
+
+            document.getElementById("tokenStatus")
+                .innerHTML = result.message;
+
+            document.getElementById("display-high").innerText = result.first_high;
+            document.getElementById("display-low").innerText = result.first_low;
+            console.log("High:", result.first_high, "Low:", result.first_low);                
+        }
+
+        async function next_candle_asondate() {
+
+            const asondate = document.getElementById("asondate").value;
+            console.log(`asondate: ${asondate}`);
+            const response =
+                await fetch('/next_candle_asondate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        asondate: asondate
+                    })
+                });
+
+            const data = await response.json();
+
+            if (data.finished) {
+
+                document.getElementById("alert")
+                    .innerHTML = "Replay Finished";
+
+                return;
+            }
+
+            document.getElementById("datetime")
+                .innerHTML = data.datetime;
+
+            document.getElementById("ohlc")
+                .innerHTML =
+                `
+                Open : ${data.open}<br>
+                High : ${data.high}<br>
+                Low : ${data.low}<br>
+                Close : ${data.close}
+                `;
+
+            document.getElementById("alert")
+                .innerHTML = data.alert ?? "";
+
+
+            document.getElementById("tokenStatus")
+                .innerHTML = result.message;
+        }
 
         async function saveToken() {
 
