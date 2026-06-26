@@ -110,10 +110,10 @@
     <script>
         async function save_tv() {
 
-            const username = document.getElementById("username");
-            const password = document.getElementById("password");
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
 
-            if(!username.value.trim() || !password.value.trim())
+            if(!username.trim() || !password.trim())
             {
                 alert("Username or Password cannot be blank.");
                 return;
@@ -190,22 +190,54 @@
             document.getElementById("alert")
                 .innerHTML = data.alert ?? "";
         }
-
+        
         async function get_live_data() {
 
+            // 1. Define a named helper function containing the payload logic
+            async function fetchAndUpdateUI() {
+                try {
+                    const response = await fetch('/get_live_data');
+                    const data = await response.json();
+                    console.log(data);
+
+                    if (data.finished) {
+                        document.getElementById("alert").innerHTML = "Replay Finished";
+                        
+                        // Clear the interval to stop future hits to your endpoint
+                        clearInterval(liveDataInterval);
+                        return;
+                    }
+
+                    document.getElementById("error_message").innerHTML = `${data.error_message}`;
+                    document.getElementById("first_high").innerHTML = `High: ${data.first_high}`;
+                    document.getElementById("first_low").innerHTML = `Low: ${data.first_low}`;
+                    document.getElementById("datetime").innerHTML = data.datetime;
+
+                    document.getElementById("ohlc").innerHTML = `
+                        Current Date Time: ${new Date().toLocaleString()}<br>
+                        Open : ${data.open}<br>
+                        High : ${data.high}<br>
+                        Low : ${data.low}<br>
+                        Close : ${data.close}
+                    `;
+
+                    document.getElementById("alert").innerHTML = data.alert ?? "";
+                } catch (error) {
+                    console.error("Error pulling live streaming candle data:", error);
+                }
+            }
+
+            // 2. Call it IMMEDIATELY the first time
+            await fetchAndUpdateUI();
+
+            // 3. Set up the interval loop to fire every 15 seconds thereafter
+            const liveDataInterval = setInterval(fetchAndUpdateUI, 15000);
+        }
+
+        async function get_live_dataA() {
+
             setInterval(async () => {
-                // const response =
-                //     await fetch('/get_live_data');
-                const response = await fetch('/get_live_data', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json' // Tells Flask to expect JSON
-                    },
-                    body: JSON.stringify({ 
-                        username: username, 
-                        password: password 
-                    })
-                });
+                const response = await fetch('/get_live_data');
 
                 const data =
                     await response.json();
