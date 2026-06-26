@@ -69,6 +69,7 @@ def backtest_asondate():
 @app.route("/backtest")
 def backtest():
     unique_dates = df['datetime'].dt.date.unique().tolist()
+    unique_dates.sort(reverse=True)
     print(unique_dates)
     # session['current_index'] = 1
 
@@ -384,10 +385,12 @@ def index():
         error_message=error_message
     )
 
-@app.route("/get_live_data", methods=["POST"])
+@app.route("/get_live_data") #, methods=["POST"])
 def get_live_data():
-    username = request.form.get("username")
-    password = request.form.get("password")
+    # username = request.form.get("username")
+    # password = request.form.get("password")
+    username = session.get("username","")
+    password = session.get("password","")
     print(f"Username: {username}, Password: {password}")
 
     from datetime import datetime
