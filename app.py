@@ -576,6 +576,8 @@ def get_live_data():
     high_str = ""
     low_str = ""
     for idx, row in dft_dict[first_key].iterrows():
+        highs = 0
+        lows = 0
         high_tickers_count = 0
         low_tickers_count = 0
         print(idx, row['datetime'], len(dft_dict[first_key])-1)
@@ -586,32 +588,80 @@ def get_live_data():
                     df_details_dict[ticker]["highs"] = []
                     df_details_dict[ticker]["lows"] = []
 
-                print(df_details_dict[ticker].get("high"), df_details_dict[ticker].get("low"))
-                print(dft_dict[ticker].iloc[idx])
+                print(f"{ticker}: {df_details_dict[ticker].get('high')}, {df_details_dict[ticker].get('low')}")
+                # print(dft_dict[ticker].iloc[idx])
                 if "high" in df_details_dict[ticker]:
                     if(dft_dict[ticker].iloc[idx]["high"] > df_details_dict[ticker].get("high")):
-                        # print("New High!")
+                        print(f"New High for {ticker}!")
+                        highs += 1
                         df_details_dict[ticker]["high"] = dft_dict[ticker].iloc[idx].get("high")
                         df_details_dict[ticker]["high_Index"] = idx
+                        df_details_dict[ticker]["high_at"] = row['datetime']
                 else:
                     df_details_dict[ticker]["high"] = dft_dict[ticker].iloc[idx].get("high")
                     df_details_dict[ticker]["high_Index"] = idx
+                    df_details_dict[ticker]["high_at"] = row['datetime']
 
                 if "low" in df_details_dict[ticker]:
                     if(dft_dict[ticker].iloc[idx]["low"] < df_details_dict[ticker].get("low")):
-                        # print("New Low!")
+                        print(f"New Low for {ticker}!")
+                        lows += 1
                         df_details_dict[ticker]["low"] = dft_dict[ticker].iloc[idx].get("low")
                         df_details_dict[ticker]["low_Index"] = idx
+                        df_details_dict[ticker]["low_at"] = row['datetime']
                 else:
                     df_details_dict[ticker]["low"] = dft_dict[ticker].iloc[idx].get("low")
                     df_details_dict[ticker]["low_Index"] = idx
+                    df_details_dict[ticker]["low_at"] = row['datetime']
             else:
                 current_datetime = dft_dict[first_key].iloc[idx]['datetime']
                 if(dft_dict[ticker].iloc[idx]["high"] > df_details_dict[ticker].get("high")):
                     high_tickers_count += 1
+                    df_details_dict[ticker]["high"] = dft_dict[ticker].iloc[idx].get("high")
+                    df_details_dict[ticker]["high_Index"] = idx
+                    df_details_dict[ticker]["high_at"] = row['datetime']
                 if(dft_dict[ticker].iloc[idx]["low"] < df_details_dict[ticker].get("low")):
                     low_tickers_count += 1
+                    df_details_dict[ticker]["low"] = dft_dict[ticker].iloc[idx].get("low")
+                    df_details_dict[ticker]["low_Index"] = idx
+                    df_details_dict[ticker]["low_at"] = row['datetime']
 
+            print("")
+        print(f"Highs: {highs}, Lows: {lows}")
+        if(highs > 0 or lows > 0):
+            error_message = "High or Lows found."
+            print(f"High or Lows found")
+            if (highs == len(tickers)):
+                for ticker in tickers:
+                    df_details_dict[ticker]["highs"].append([dft_dict[ticker].iloc[idx]["high"], dft_dict[ticker].iloc[idx]["close"], idx, dft_dict[ticker].iloc[idx]["datetime"]])
+                
+            if (lows == len(tickers)):
+                for ticker in tickers:
+                    df_details_dict[ticker]["lows"].append([dft_dict[ticker].iloc[idx]["low"], dft_dict[ticker].iloc[idx]["close"], idx, dft_dict[ticker].iloc[idx]["datetime"]])
+
+            for ticker in tickers:
+                print(df_details_dict[ticker])
+                if(len(df_details_dict[ticker]["highs"]) > 0):
+                    print(f"{ticker} highs: {df_details_dict[ticker]['highs']}")
+                    high = high in df_details_dict[ticker]['highs'][-1]
+                    error_message = f"All tickers were reached High at {high[3]}"
+                    # # 0 - High, 1 - Close, 2 - Index, 3 - Datetime
+                    # for high in df_details_dict[ticker]['highs']:
+                    #     df_max = dft_dict[ticker][dft_dict[ticker]["datetime"] > high[3]].max()
+                    #     trades.append([trade_date, ticker, "CE", high[3], high[1], df_max["datetime"], df_max["high"]])
+                if(len(df_details_dict[ticker]["lows"]) > 0):
+                    print(f"{ticker} lows: {df_details_dict[ticker]['lows']}")
+                    low = low in df_details_dict[ticker]['lows'][-1]
+                    error_message = f"All tickers were reached Low at {low[3]}"
+                    # # 0 - Low, 1 - Close, 2 - Index, 3 - Datetime
+                    # for low in df_details_dict[ticker]['lows']:
+                    #     df_min = dft_dict[ticker][dft_dict[ticker]["datetime"] > low[3]].min()
+                    #     print(f"{ticker} low: {low}")
+                    #     trades.append([trade_date, ticker, "PE", low[3], low[1], df_min["datetime"], df_min["low"]])
+        else:
+            error_message = "No new highs or lows found yet."
+            print(f"All tickers did not have new highs or lows yet")
+                                
         print(f"High tickers count: {high_tickers_count}, Low tickers count: {low_tickers_count}")
         if(high_tickers_count == len(tickers)):
             print(f"All tickers have new high at index {idx} ({dft_dict[first_key].iloc[idx]['datetime']})")
@@ -676,7 +726,7 @@ def get_live_data():
             "alert": alert,
             "finished": False,
             "message": message,
-            "error_message": ""
+            "error_message": error_message
         })
     else:
         return jsonify({
