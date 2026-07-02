@@ -103,6 +103,10 @@
         Start Live
     </button>
 
+    <button onclick="stop_live_data()">
+        Stop Live
+    </button>
+
     <div id="tokenStatus" class="success"></div>
 
 
@@ -121,6 +125,7 @@
     <div id="alert" class="alert"></div>
 
     <script>
+        var liveDataInterval; // Declare the interval variable in a broader scope
         async function save_tv() {
 
             const username = document.getElementById("username").value;
@@ -205,6 +210,12 @@
                 .innerHTML = data.alert ?? "";
         }
         
+        function stop_live_data() {
+            if (liveDataInterval) {
+                clearInterval(liveDataInterval);
+            }
+        }
+
         async function get_live_data() {
 
             // 1. Define a named helper function containing the payload logic
@@ -245,8 +256,8 @@
                     element.style.whiteSpace = "pre-wrap";
                     
 
-
-                    element.textContent = `${data.message}`;
+                    const messageText = (data && data.message) ? data.message : "";
+                    element.textContent = `Current Date Time: ${new Date().toLocaleString()}\n${messageText}`;
 
                     document.getElementById("alert").innerHTML = data.alert ?? "";
                 } catch (error) {
@@ -258,7 +269,7 @@
             await fetchAndUpdateUI();
 
             // 3. Set up the interval loop to fire every 15 seconds thereafter
-            const liveDataInterval = setInterval(fetchAndUpdateUI, 15000);
+            liveDataInterval = setInterval(fetchAndUpdateUI, 15000);
         }
 
         async function get_live_dataA() {
