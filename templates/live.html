@@ -99,18 +99,28 @@
     <button onclick="testPushbullet()">
         Test Pushbullet
     </button>
-    <button onclick="get_live_data()">
-        Start Live
-    </button>
-
-    <button onclick="stop_live_data()">
-        Stop Live
-    </button>
-
-    <div id="tokenStatus" class="success"></div>
-
 
     <hr>
+    <div id="tokenStatus" class="success"></div>
+    <div>
+        <label>
+            Enter the tickers to monitor:
+        </label>
+        <input
+            type="text"
+            id="tickers"
+            value="NIFTY, BANKNIFTY, NIFTY_MID_SELECT, NIFTYJR"
+            placeholder="Enter tickers to monitor">
+
+        <button onclick="get_live_data()">
+            Start Live
+        </button>
+
+        <button onclick="stop_live_data()">
+            Stop Live
+        </button>
+    </div>
+
     <div class="candle">
 
         <div id="datetime"></div>
@@ -118,9 +128,7 @@
 
     </div>
     <div id="error_message" class="alert alert-danger">
-        
     </div>
-
 
     <div id="alert" class="alert"></div>
 
@@ -221,7 +229,18 @@
             // 1. Define a named helper function containing the payload logic
             async function fetchAndUpdateUI() {
                 try {
-                    const response = await fetch('/get_live_data');
+                    // const response = await fetch('/get_live_data');
+                    const tickers = document.getElementById("tickers").value;
+                    const response = await fetch('/get_live_data', 
+                    {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            tickers: tickers
+                        })
+                    });                    
                     const data = await response.json();
                     console.log(data);
 

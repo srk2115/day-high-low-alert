@@ -506,8 +506,9 @@ def get_live_data_nifty():
             "error_message": ""
         })
 
-@app.route("/get_live_data") #, methods=["POST"])
+@app.route("/get_live_data", methods=["POST"])
 def get_live_data():
+    data = request.get_json()
     username = session.get("username","")
     password = session.get("password","")
     print(f"Username: {username}, Password: {password}")
@@ -526,7 +527,9 @@ def get_live_data():
     import io
 
     asondate = cf.getCurrentDate()
-    tickers = ["NIFTY", "BANKNIFTY", "NIFTY_MID_SELECT", "NIFTYJR"]         # Nifty 50 index , "SENSEX"
+    raw_tickers = data.get("tickers", "")
+    tickers = [t.strip() for t in raw_tickers.split(",") if t.strip()] #session.get("tickers", ["NIFTY", "BANKNIFTY", "NIFTY_MID_SELECT", "NIFTYJR"])         # Nifty 50 index , "SENSEX", 
+    print(tickers)
     df_dict = {}
     for ticker in tickers:
         print(f"Fetching 5m data for {ticker}")
@@ -638,29 +641,21 @@ def get_live_data():
             if (lows == len(tickers)):
                 for ticker in tickers:
                     df_details_dict[ticker]["lows"].append([dft_dict[ticker].iloc[idx]["low"], dft_dict[ticker].iloc[idx]["close"], idx, dft_dict[ticker].iloc[idx]["datetime"]])
-
-            for ticker in tickers:
-                print(df_details_dict[ticker])
-                if(len(df_details_dict[ticker]["highs"]) > 0):
-                    print(f"{ticker} highs: {df_details_dict[ticker]['highs']}")
-                    high = high in df_details_dict[ticker]['highs'][-1]
-                    error_message = f"All tickers were reached High at {high[3]}"
-                    # # 0 - High, 1 - Close, 2 - Index, 3 - Datetime
-                    # for high in df_details_dict[ticker]['highs']:
-                    #     df_max = dft_dict[ticker][dft_dict[ticker]["datetime"] > high[3]].max()
-                    #     trades.append([trade_date, ticker, "CE", high[3], high[1], df_max["datetime"], df_max["high"]])
-                if(len(df_details_dict[ticker]["lows"]) > 0):
-                    print(f"{ticker} lows: {df_details_dict[ticker]['lows']}")
-                    low = low in df_details_dict[ticker]['lows'][-1]
-                    error_message = f"All tickers were reached Low at {low[3]}"
-                    # # 0 - Low, 1 - Close, 2 - Index, 3 - Datetime
-                    # for low in df_details_dict[ticker]['lows']:
-                    #     df_min = dft_dict[ticker][dft_dict[ticker]["datetime"] > low[3]].min()
-                    #     print(f"{ticker} low: {low}")
-                    #     trades.append([trade_date, ticker, "PE", low[3], low[1], df_min["datetime"], df_min["low"]])
         else:
             error_message = "No new highs or lows found yet."
             print(f"All tickers did not have new highs or lows yet")
+
+        for ticker in tickers:
+            print(df_details_dict[ticker])
+            if(len(df_details_dict[ticker]["highs"]) > 0):
+                print(f"{ticker} highs: {df_details_dict[ticker]['highs']}")
+                high = df_details_dict[ticker]['highs'][-1]
+                error_message = f"All tickers were reached High at {high[3]}"
+            if(len(df_details_dict[ticker]["lows"]) > 0):
+                print(f"{ticker} lows: {df_details_dict[ticker]['lows']}")
+                low = df_details_dict[ticker]['lows'][-1]
+                error_message = f"All tickers were reached Low at {low[3]}"
+
                                 
         print(f"High tickers count: {high_tickers_count}, Low tickers count: {low_tickers_count}")
         if(high_tickers_count == len(tickers)):
