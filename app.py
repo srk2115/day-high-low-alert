@@ -385,8 +385,8 @@ def index():
         error_message=error_message
     )
 
-@app.route("/get_live_data") #, methods=["POST"])
-def get_live_data():
+@app.route("/get_live_data_nifty") #, methods=["POST"])
+def get_live_data_nifty():
     # username = request.form.get("username")
     # password = request.form.get("password")
     username = session.get("username","")
@@ -505,6 +505,193 @@ def get_live_data():
             "finished": False,
             "error_message": ""
         })
+
+@app.route("/get_live_data") #, methods=["POST"])
+def get_live_data():
+    username = session.get("username","")
+    password = session.get("password","")
+    print(f"Username: {username}, Password: {password}")
+
+    from datetime import datetime
+    # import warnings
+
+    import commonfunctions as cf
+    import stockdata as sd
+    import stockdetails as stkdtls
+
+    import pandas as pd
+    # warnings.filterwarnings("ignore")
+    import matplotlib.pyplot as plt
+    import mplfinance as mpf
+    import io
+
+    asondate = cf.getCurrentDate()
+    tickers = ["NIFTY", "BANKNIFTY", "NIFTY_MID_SELECT", "NIFTYJR"]         # Nifty 50 index , "SENSEX"
+    df_dict = {}
+    for ticker in tickers:
+        print(f"Fetching 5m data for {ticker}")
+        df = sd.get_stock_data(ticker, interval="5m", asondate=asondate, data_source="tv", asondateonly=True, username=username, password=password)
+        if(not df is None):
+            print(f"{ticker}: {df.shape[0]} rows")
+            df['datetime'] = pd.to_datetime(df['datetime'])
+            df_dict[ticker] = df.reset_index(drop=True)
+
+    error_message = ""
+    first_candle = []
+    first_high = None
+    first_low = None
+    alert = None
+    message = ""
+
+    pushbullet_token = session.get(
+        "pushbullet_token"
+    )
+
+    unique_dates = []
+    for ticker, df in df_dict.items():
+        if df.empty:
+            print(f"No data for {ticker}")
+            continue
+        # each df should be in same shape
+        if df.shape[0] != df_dict[tickers[0]].shape[0]:
+            print(f"Data shape mismatch for {ticker}: {df.shape} vs {df_dict[tickers[0]].shape}")
+            error_message = f"Data shape mismatch for {ticker}: {df.shape} vs {df_dict[tickers[0]].shape}"
+            break
+            # exit(1)
+        else:
+            print(f"Data shape match for {ticker}: {df.shape} vs {df_dict[tickers[0]].shape}")
+            # unique_dates = df['datetime'].dt.date.unique().tolist()
+            unique_dates.extend(df['datetime'].dt.date.unique().tolist())
+            unique_dates = sorted(list(set(unique_dates)))
+            
+    dft_dict = {}
+    for ticker in tickers:
+        dft_dict[ticker] = df_dict[ticker] #df_dict[ticker][df_dict[ticker]['Date'] == '2026-07-01'].reset_index(drop=True)
+
+    df_details_dict = {}
+    trades = []
+    first_key = list(dft_dict.keys())[0]
+    rows_count = dft_dict[first_key].shape[0]
+    print(f"First key: {first_key}, Number of rows: {dft_dict[first_key].shape[0]}")
+    high_str = ""
+    low_str = ""
+    for idx, row in dft_dict[first_key].iterrows():
+        high_tickers_count = 0
+        low_tickers_count = 0
+        print(idx, row['datetime'], len(dft_dict[first_key])-1)
+        if(idx != len(dft_dict[first_key])-1):
+            for ticker in tickers:
+                if(ticker not in df_details_dict):
+                    df_details_dict[ticker] = {}
+                    df_details_dict[ticker]["highs"] = []
+                    df_details_dict[ticker]["lows"] = []
+
+                print(df_details_dict[ticker].get("high"), df_details_dict[ticker].get("low"))
+                print(dft_dict[ticker].iloc[idx])
+                if "high" in df_details_dict[ticker]:
+                    if(dft_dict[ticker].iloc[idx]["high"] > df_details_dict[ticker].get("high")):
+                        # print("New High!")
+                        df_details_dict[ticker]["high"] = dft_dict[ticker].iloc[idx].get("high")
+                        df_details_dict[ticker]["high_Index"] = idx
+                else:
+                    df_details_dict[ticker]["high"] = dft_dict[ticker].iloc[idx].get("high")
+                    df_details_dict[ticker]["high_Index"] = idx
+
+                if "low" in df_details_dict[ticker]:
+                    if(dft_dict[ticker].iloc[idx]["low"] < df_details_dict[ticker].get("low")):
+                        # print("New Low!")
+                        df_details_dict[ticker]["low"] = dft_dict[ticker].iloc[idx].get("low")
+                        df_details_dict[ticker]["low_Index"] = idx
+                else:
+                    df_details_dict[ticker]["low"] = dft_dict[ticker].iloc[idx].get("low")
+                    df_details_dict[ticker]["low_Index"] = idx
+            else:
+                current_datetime = dft_dict[first_key].iloc[idx]['datetime']
+                if(dft_dict[ticker].iloc[idx]["high"] > df_details_dict[ticker].get("high")):
+                    high_tickers_count += 1
+                if(dft_dict[ticker].iloc[idx]["low"] < df_details_dict[ticker].get("low")):
+                    low_tickers_count += 1
+
+        print(f"High tickers count: {high_tickers_count}, Low tickers count: {low_tickers_count}")
+        if(high_tickers_count == len(tickers)):
+            print(f"All tickers have new high at index {idx} ({dft_dict[first_key].iloc[idx]['datetime']})")
+            message = f"All tickers have new high at index {idx} ({dft_dict[first_key].iloc[idx]['datetime']})"
+            high_str = ""
+            for ticker in tickers:
+                high_str = f"{high_str}\n{dft_dict[ticker].iloc[idx]['high']}"
+            alert = (
+                f"🚀 All tickers have new high "
+                f"({high_str})"
+            )
+
+            send_pushbullet(
+                pushbullet_token,
+                "NIFTY BREAKOUT",
+                alert
+            )
+
+            for ticker in tickers:
+                df_details_dict[ticker]["highs"].append([dft_dict[ticker].iloc[idx]["high"], dft_dict[ticker].iloc[idx]["close"], idx, dft_dict[ticker].iloc[idx]["datetime"]])
+
+        if(low_tickers_count == len(tickers)):
+            print(f"All tickers have new low at index {idx} ({dft_dict[first_key].iloc[idx]['datetime']})")
+            message = f"All tickers have new low at index {idx} ({dft_dict[first_key].iloc[idx]['datetime']})"
+            low_str = ""
+            for ticker in tickers:
+                low_str = f"{low_str}\n{dft_dict[ticker].iloc[idx]['low']}"
+            alert = (
+                f"🚀 All tickers have new low "
+                f"({low_str})"
+            )
+
+            send_pushbullet(
+                pushbullet_token,
+                "NIFTY BREAKOUT",
+                alert
+            )
+
+            for ticker in tickers:
+                # print(f"{ticker}, Low: {df_details_dict[ticker]['low']} ({df_details_dict[ticker]['low_Index']}), Index: {idx}")
+                df_details_dict[ticker]["lows"].append([dft_dict[ticker].iloc[idx]["low"], dft_dict[ticker].iloc[idx]["close"], idx, dft_dict[ticker].iloc[idx]["datetime"]])
+
+    print(f"Rows: {rows_count}")
+    if(rows_count != 0):
+        for ticker in tickers:
+            high_str = f"{high_str}\n{df_details_dict[ticker].get('high')}"
+            low_str = f"{low_str}\n{df_details_dict[ticker].get('low')}"
+            message = f"{message}\n{ticker.ljust(25, ' ')}: Current High: {dft_dict[ticker].iloc[idx]['high']}, Current Low: {dft_dict[ticker].iloc[idx]['low']}"
+            message = f"{message} (Day High - {df_details_dict[ticker].get('high')}, Day Low - {df_details_dict[ticker].get('low')})"
+    else:
+        error_message = "No data found yet."
+
+    if(rows_count != 0):
+        return jsonify({
+            "datetime": str(dft_dict[first_key].iloc[-1]['datetime']),
+            # "current_high": float(first_high),
+            # "first_low": float(first_low),
+            # "open": float(current['open']),
+            # "high": float(current['high']),
+            # "low": float(current['low']),
+            # "close": float(current['close']),
+            "alert": alert,
+            "finished": False,
+            "message": message,
+            "error_message": ""
+        })
+    else:
+        return jsonify({
+            "datetime": None,
+            # "first_high": None,
+            # "first_low": None,
+            # "open": None,
+            # "high": None,
+            # "low": None,
+            # "close": None,
+            "alert": alert,
+            "finished": False,
+            "error_message": error_message
+        })
+
 
 @app.route("/live_yf")
 def get_live_data_yf():

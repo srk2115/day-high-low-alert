@@ -43,24 +43,41 @@
 <body>
 
     <h2>Live</h2>
-    <div>
-        <button disabled>Live</button>
+    <!-- <div>
+        <button>Live</button>
         <button onclick="javascript:window.location= '/backtest'">Backtest</button>
-    </div>
+    </div> -->
 
     <h3>Trading View Setup</h3>
 
-    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: nowrap;">
         
         <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required>
+        <input type="text" id="username" name="username" style="width: 150px;" required>
         
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required>
+        <input type="password" id="password" name="password" style="width: 150px;" required>
         
         <button onclick="save_tv()">Save Trading View Setup</button>
 
     </div>
+
+    <!-- <div style="display: flex; align-items: center; gap: 20px; flex-wrap: nowrap;">
+        
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <label for="username">Username:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 5px;">
+            <label for="password">Password:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        
+        <button onclick="save_tv()">Save Trading View Setup</button>
+
+    </div> -->
+
     <!-- <label for="user">Username:</label>
     <input type="text" id="user" name="username" required>
     
@@ -90,10 +107,6 @@
 
 
     <hr>
-    <h3>Reference Candle</h3>
-    <div id="first_high">High:</div>
-    <div id="first_low">Low:</div>
-
     <div class="candle">
 
         <div id="datetime"></div>
@@ -187,6 +200,7 @@
                 Close : ${data.close}
                 `;
 
+
             document.getElementById("alert")
                 .innerHTML = data.alert ?? "";
         }
@@ -208,18 +222,31 @@
                         return;
                     }
 
-                    document.getElementById("error_message").innerHTML = `${data.error_message}`;
-                    document.getElementById("first_high").innerHTML = `High: ${data.first_high}`;
-                    document.getElementById("first_low").innerHTML = `Low: ${data.first_low}`;
-                    document.getElementById("datetime").innerHTML = data.datetime;
+                    console.log(`${data.error_message}`);
 
-                    document.getElementById("ohlc").innerHTML = `
-                        Current Date Time: ${new Date().toLocaleString()}<br>
-                        Open : ${data.open}<br>
-                        High : ${data.high}<br>
-                        Low : ${data.low}<br>
-                        Close : ${data.close}
-                    `;
+                    document.getElementById("error_message").innerHTML = `${data.error_message}`;
+                    // document.getElementById("first_high").innerHTML = `High: ${data.first_high}`;
+                    // document.getElementById("first_low").innerHTML = `Low: ${data.first_low}`;
+                    // document.getElementById("datetime").innerHTML = data.datetime;
+
+
+                    // document.getElementById("ohlc").innerHTML = `
+                    //     Current Date Time: ${new Date().toLocaleString()}<br>
+                    //     Open : ${data.open}<br>
+                    //     High : ${data.high}<br>
+                    //     Low : ${data.low}<br>
+                    //     Close : ${data.close}
+                    // `;
+                    // document.getElementById("ohlc")
+                    //     .innerHTML = `${data.message}.replaceAll("\n", "<br />");`;
+
+                    const element = document.getElementById("ohlc");
+                    // element.style.whiteSpace = "pre-line";
+                    element.style.whiteSpace = "pre-wrap";
+                    
+
+
+                    element.textContent = `${data.message}`;
 
                     document.getElementById("alert").innerHTML = data.alert ?? "";
                 } catch (error) {

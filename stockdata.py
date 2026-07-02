@@ -100,7 +100,15 @@ def get_stock_data(stock, interval="15m", asondate=cf.getCurrentDate(), data_sou
         intvl = Interval.in_daily
         n_bars = days
       print(f"params: {startdt} - {days} - {stock} - {intvl} - {n_bars} - {fut_contract}")  
-      data = tv.get_hist(stock,'NSE',interval=intvl,n_bars=n_bars,fut_contract=fut_contract)
+      exchange = 'NSE'
+      if(stock == "SENSEX"):
+        exchange = 'BSE'
+      if ":" in stock:
+        exchange = stock.split(":")[0]
+        stock = stock.split(":")[1]
+
+      print(f"{exchange}:{stock}")
+      data = tv.get_hist(stock,exchange,interval=intvl,n_bars=n_bars,fut_contract=fut_contract)
       # print(data.tail())
       # data = tv.get_hist(stock,'NSE',interval=intvl,n_bars=n_bars)
       # print(data)
@@ -119,8 +127,8 @@ def get_stock_data(stock, interval="15m", asondate=cf.getCurrentDate(), data_sou
         data = data[(data["Date"] <= f"{asondt}")]
         if(asondateonly):
           data = data[(data["Date"] >= f"{asondt}")]
-    except:
-      print(f"in exception for {stock}") 
+    except Exception as e:
+      print(f"in exception for {stock}: {e}") 
   return data
 
 def get_stock_data_from_to(stock, interval="15m", asondate=cf.getCurrentDate(), data_source = "yahoo", asondateonly=True, fut_contract=None, days=5, fromdate="2024-01-01", todate=cf.getCurrentDate()):
